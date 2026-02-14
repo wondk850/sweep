@@ -2810,11 +2810,22 @@ body {
 .wrong-correct {
     font-size: 14px;
     color: var(--text);
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     padding: 8px 10px;
     background: rgba(16, 185, 129, 0.08);
     border-radius: 6px;
     line-height: 1.5;
+}
+
+.wrong-student {
+    font-size: 14px;
+    color: var(--danger);
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 6px;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 .error-words {

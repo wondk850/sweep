@@ -824,7 +824,8 @@ function checkAnswer() {
             attempts: currentAttempts,
             hintsUsed: state.hintsUsed,
             time: timeSpent,
-            errors: [...currentErrors]
+            errors: [...currentErrors],
+            studentAnswer: currentOrder.join(' ')
         });
 
         currentAttempts = 0;
@@ -873,7 +874,8 @@ function checkAnswer() {
                 hintsUsed: state.hintsUsed,
                 time: timeSpent,
                 errors: [...currentErrors],
-                skipped: true
+                skipped: true,
+                studentAnswer: currentOrder.join(' ')
             });
 
             currentAttempts = 0;
@@ -1997,7 +1999,8 @@ function generateDetailedFeedback() {
                     stage: result.stage,
                     attempts: result.attempts,
                     errors: [],
-                    skipped: result.skipped || false
+                    skipped: result.skipped || false,
+                    studentAnswer: result.studentAnswer || ''
                 };
             }
             if (result.errors && result.errors.length > 0) {
@@ -2044,6 +2047,7 @@ function generateDetailedFeedback() {
                         <span class="wrong-attempts">${item.attempts}회 시도</span>
                     </div>
                     <div class="wrong-correct">✅ 정답: ${item.sentence}</div>
+                    ${item.studentAnswer ? `<div class="wrong-student">❌ 학생 답: ${item.studentAnswer}</div>` : ''}
                     ${errorDetailHtml}
                 </div>
             `;
@@ -2152,7 +2156,8 @@ function captureResults() {
                     stage: result.stage,
                     attempts: result.attempts,
                     errors: [],
-                    skipped: result.skipped || false
+                    skipped: result.skipped || false,
+                    studentAnswer: result.studentAnswer || ''
                 };
             }
             if (result.errors && result.errors.length > 0) {
@@ -2167,6 +2172,9 @@ function captureResults() {
             var skipText = item.skipped ? ' [SKIP]' : '';
             report += '\n[' + stageLabel + '] ' + item.attempts + '\uD68C \uC2DC\uB3C4' + skipText + '\n';
             report += '\u2705 \uC815\uB2F5: ' + item.sentence + '\n';
+            if (item.studentAnswer) {
+                report += '\u274C \uD559\uC0DD \uB2F5: ' + item.studentAnswer + '\n';
+            }
 
             if (item.errors.length > 0) {
                 var uniqueErrors = [];
