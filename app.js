@@ -531,6 +531,7 @@ function loadCurrentSentence() {
     const sentence = state.sentences[state.currentSentenceIndex];
     state.stageStartTime = Date.now();
     state.currentStageAttempts = 0;  // Reset attempts for new stage
+    lastWrongSentence = '';  // 방어적 초기화 - 새 문제 시 오답 데이터 클리어
 
     document.getElementById('current-sentence-num').textContent = state.currentSentenceIndex + 1;
     document.getElementById('total-sentences').textContent = state.sentences.length;
@@ -1072,8 +1073,10 @@ function compareSpeechToAnswer(spoken) {
             hintsUsed: state.hintsUsed,
             time: timeSpent,
             errors: [],
-            speechMode: true
+            speechMode: true,
+            studentAnswer: lastWrongSentence || ''
         });
+        lastWrongSentence = '';
 
         setTimeout(() => {
             document.getElementById('speech-result').classList.add('hidden');
@@ -1084,6 +1087,9 @@ function compareSpeechToAnswer(spoken) {
         state.wrongAttempts++;
         state.totalAttempts++;
         state.currentStageAttempts++;
+
+        // 음성 오답 저장
+        lastWrongSentence = spoken;
 
         const spokenWords = spokenNorm.split(' ');
         const correctWords = correctNorm.split(' ');
