@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sweep - 영어 순서배열</title>
+    <link rel="stylesheet" href="style.css?v=20260214b">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- 모드 선택 화면 -->
+    <div id="mode-select" class="screen active">
+        <div class="mode-container">
+            <div class="logo-section">
+                <div class="logo">
+                    <span class="logo-icon">🧹</span>
+                    <h1>Sweep</h1>
+                </div>
+                <p class="tagline">영어 어순을 쓱쓱 정리하자!</p>
+                <p class="version-tag">v2.0</p>
+            </div>
+
+            <div class="mode-buttons">
+                <button class="mode-btn teacher-btn" onclick="showTeacherMode()">
+                    <span class="btn-icon">👨‍🏫</span>
+                    <span class="btn-text">선생님 모드</span>
+                    <span class="btn-desc">문장 입력 및 관리</span>
+                </button>
+                <button class="mode-btn student-btn" onclick="showStudentMode()">
+                    <span class="btn-icon">📚</span>
+                    <span class="btn-text">학생 모드</span>
+                    <span class="btn-desc">순서배열 학습</span>
+                </button>
+                <button class="mode-btn guide-btn" onclick="showPairingGuide()">
+                    <span class="btn-icon">🧩</span>
+                    <span class="btn-text">짝 개념 가이드</span>
+                    <span class="btn-desc">영어 어순의 핵심 원리</span>
+                </button>
+            </div>
+
+            <footer class="studio-footer">
+                <p>Made with ❤️ by <strong>Wonsummer Studio</strong></p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 선생님 모드 -->
+    <div id="teacher-mode" class="screen">
+        <header class="app-header">
+            <button class="back-btn" onclick="showModeSelect()">←</button>
+            <h2>👨‍🏫 선생님 모드</h2>
+            <div class="header-spacer"></div>
+        </header>
+
+        <div class="teacher-container">
+            <div class="input-section">
+                <label for="sentence-input">문장 입력</label>
+                <textarea id="sentence-input"
+                    placeholder="영어 문장을 입력하세요...&#10;예: The quick brown fox jumps over the lazy dog.&#10;&#10;여러 문장을 입력하려면 줄바꿈으로 구분하세요."></textarea>
+
+                <button class="primary-btn" onclick="addSentences()">
+                    <span>➕</span> 문장 추가
+                </button>
+            </div>
+
+            <div class="sentence-list-section">
+                <div class="section-header">
+                    <h3>📝 문장 목록</h3>
+                    <span class="sentence-count" id="sentence-count">0개</span>
+                </div>
+                <div id="sentence-list" class="sentence-list">
+                    <div class="empty-state">
+                        <span class="empty-icon">📭</span>
+                        <p>아직 추가된 문장이 없습니다</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 단계 선택 옵션 -->
+            <div class="options-section">
+                <div class="section-header">
+                    <h3>🎚️ 학습 설정</h3>
+                </div>
+                <div class="options-grid">
+                    <div class="option-group">
+                        <label class="option-label">단계 선택</label>
+                        <div class="stage-checkboxes">
+                            <label class="checkbox-pill">
+                                <input type="checkbox" id="stage1-check" checked>
+                                <span>1단계</span>
+                            </label>
+                            <label class="checkbox-pill">
+                                <input type="checkbox" id="stage2-check" checked>
+                                <span>2단계</span>
+                            </label>
+                            <label class="checkbox-pill">
+                                <input type="checkbox" id="stage3-check" checked>
+                                <span>3단계</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">시도 제한</label>
+                        <div class="attempt-mode-options">
+                            <label class="radio-pill">
+                                <input type="radio" name="attempt-mode" id="attempt-unlimited" checked>
+                                <span>♾️ 맞출 때까지</span>
+                            </label>
+                            <label class="radio-pill limit-mode">
+                                <input type="radio" name="attempt-mode" id="attempt-limited">
+                                <span>❌ 3번 틀리면 스킵</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">진행 방식</label>
+                        <div class="attempt-mode-options">
+                            <label class="radio-pill">
+                                <input type="radio" name="progress-mode" id="progress-focus" checked>
+                                <span>🎯 집중모드</span>
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="progress-mode" id="progress-cycle">
+                                <span>🔄 순환모드</span>
+                            </label>
+                        </div>
+                        <div class="option-desc" id="progress-desc">
+                            <small>🎯 한 문장을 1→2→3단계 모두 완료 후 다음 문장</small>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">추가 옵션</label>
+                        <div class="extra-options">
+                            <label class="checkbox-pill random-toggle">
+                                <input type="checkbox" id="random-check">
+                                <span>🎲 문장 랜덤 순서</span>
+                            </label>
+                            <label class="checkbox-pill timer-toggle">
+                                <input type="checkbox" id="timer-check">
+                                <span>⏱️ 타이머</span>
+                            </label>
+                            <div class="timer-input-group">
+                                <input type="number" id="timer-seconds" value="60" min="10" max="300">
+                                <span>초</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="secondary-btn" onclick="clearAllSentences()">
+                    <span>🗑️</span> 전체 삭제
+                </button>
+                <button class="share-btn" onclick="generateShareLink()">
+                    <span>🔗</span> 링크 생성
+                </button>
+                <button class="primary-btn" onclick="startSession()">
+                    <span>🚀</span> 세션 시작
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생 모드 - 대기 화면 -->
+    <div id="student-waiting" class="screen">
+        <header class="app-header">
+            <button class="back-btn" onclick="showModeSelect()">←</button>
+            <h2>📚 학생 모드</h2>
+            <div class="header-spacer"></div>
+        </header>
+
+        <div class="waiting-container">
+            <div class="waiting-content">
+                <div class="waiting-icon">⏳</div>
+                <h3>선생님이 공유한 링크로<br>접속하세요!</h3>
+                <p class="waiting-hint">선생님에게 링크를 받으세요</p>
+
+                <div class="demo-section">
+                    <p>또는</p>
+                    <button class="secondary-btn" onclick="startDemo()">
+                        <span>🎮</span> 데모 체험하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생 모드 - 학습 화면 -->
+    <div id="student-learning" class="screen">
+        <header class="app-header learning-header">
+            <button class="back-btn" onclick="exitLearning()">←</button>
+            <div class="progress-info">
+                <span id="current-sentence-num">1</span> / <span id="total-sentences">5</span>
+            </div>
+            <!-- 타이머 표시 -->
+            <div class="timer-container" id="timer-container" style="display: none;">
+                <span class="timer-icon">⏱️</span>
+                <span class="timer-display" id="timer-display">1:00</span>
+            </div>
+            <div class="stage-badge" id="stage-badge">1단계</div>
+        </header>
+
+        <div class="learning-container">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+
+            <div class="stage-info" id="stage-info">
+                <span class="stage-icon">🧩</span>
+                <span class="stage-text">청크 배열: 의미 단위로 순서를 맞춰보세요</span>
+                <button class="reset-all-btn" id="reset-all-btn" onclick="resetAllBlocks()" title="Esc 키로도 초기화">
+                    <span>🔄</span> 초기화
+                </button>
+            </div>
+
+            <div class="meaning-section" id="meaning-section">
+                <p id="korean-meaning"></p>
+                <button class="voice-btn" id="voice-btn" onclick="speakSentence()" title="문장 듣기">
+                    🔊
+                </button>
+            </div>
+
+            <div class="answer-zone" id="answer-zone"></div>
+
+            <div class="word-bank" id="word-bank"></div>
+
+            <!-- Speech Recognition Result -->
+            <div class="speech-result hidden" id="speech-result">
+                <div class="speech-label">🎤 내가 말한 문장:</div>
+                <div class="speech-text" id="speech-text"></div>
+            </div>
+
+            <div class="feedback-section hidden" id="feedback-section">
+                <div class="feedback-content" id="feedback-content"></div>
+            </div>
+
+            <div class="learning-actions">
+                <button class="hint-btn" id="hint-btn" onclick="showHint()">
+                    <span>💡</span> 힌트
+                </button>
+                <button class="mic-btn" id="mic-btn" onclick="toggleSpeechRecognition()" title="마이크로 영작하기">
+                    <span>🎤</span> 말하기
+                </button>
+                <button class="check-btn" id="check-btn" onclick="checkAnswer()">
+                    <span>✓</span> 확인 <small>(Enter)</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result-screen" class="screen">
+        <div class="result-container">
+            <div class="result-header">
+                <div class="result-icon" id="result-icon">🎉</div>
+                <h2 id="result-title">훌륭해요!</h2>
+            </div>
+
+            <div class="result-stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-correct">0</span>
+                    <span class="stat-label">정답</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-label">전체</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-accuracy">0%</span>
+                    <span class="stat-label">정확도</span>
+                </div>
+            </div>
+
+            <!-- 상세 피드백 영역 -->
+            <div class="detailed-feedback" id="detailed-feedback">
+                <!-- 여기에 상세 분석이 동적으로 생성됨 -->
+            </div>
+
+            <div class="result-actions">
+                <button class="secondary-btn" onclick="showModeSelect()">
+                    <span>🏠</span> 홈으로
+                </button>
+                <button class="primary-btn" onclick="restartLearning()">
+                    <span>🔄</span> 다시 하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 짝 개념 가이드 화면 -->
+    <div id="pairing-guide" class="screen">
+        <header class="app-header">
+            <button class="back-btn" onclick="showModeSelect()">←</button>
+            <h2>🧩 짝 개념 가이드</h2>
+            <div class="header-spacer"></div>
+        </header>
+
+        <div class="guide-container">
+            <!-- 인트로 섹션 -->
+            <div class="guide-intro">
+                <div class="intro-icon">🎮</div>
+                <h3>영어는 테트리스다!</h3>
+                <p>테트리스에서 블록이 <strong>짝을 이뤄야</strong> 줄이 사라지듯,<br>
+                    영어도 <strong>짝이 맞아야</strong> 문장이 완성됩니다!</p>
+            </div>
+
+            <!-- 왜 짝 개념인가? -->
+            <div class="guide-section">
+                <div class="section-title">
+                    <span class="title-icon">💡</span>
+                    <h4>왜 짝 개념이 중요할까?</h4>
+                </div>
+                <div class="section-content">
+                    <div class="comparison-box">
+                        <div class="compare-item kr">
+                            <div class="compare-label">한국어 🇰🇷</div>
+                            <div class="compare-text">나<span class="particle">는</span> 사과<span class="particle">를</span>
+                                먹<span class="particle">는다</span></div>
+                            <div class="compare-note">→ 조사(은/는, 을/를)가 역할을 알려줌</div>
+                        </div>
+                        <div class="compare-item en">
+                            <div class="compare-label">영어 🇺🇸</div>
+                            <div class="compare-text"><span class="subj">I</span> <span class="verb">eat</span> <span
+                                    class="obj">an apple</span></div>
+                            <div class="compare-note">→ <strong>위치</strong>가 역할을 결정함!</div>
+                        </div>
+                    </div>
+                    <div class="key-insight">
+                        <span class="insight-icon">⚡</span>
+                        <span>영어는 <strong>"어떤 자리에 있느냐"</strong>가 그 단어의 역할을 결정합니다!</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 영작할 때 왜 중요한가? -->
+            <div class="guide-section">
+                <div class="section-title">
+                    <span class="title-icon">✍️</span>
+                    <h4>영작할 때 왜 필요할까?</h4>
+                </div>
+                <div class="section-content">
+                    <div class="example-box wrong">
+                        <div class="example-label">❌ 짝이 없으면 불완전!</div>
+                        <div class="example-sentence">I like ___.</div>
+                        <div class="example-note">→ "나는 좋아해"... 뭘 좋아해? (목적어 없음!)</div>
+                    </div>
+                    <div class="example-box wrong">
+                        <div class="example-sentence">She put the book ___.</div>
+                        <div class="example-note">→ "그녀가 책을 놓았다"... 어디에? (전치사구 없음!)</div>
+                    </div>
+                    <div class="example-box correct">
+                        <div class="example-label">✅ 짝이 맞으면 완전!</div>
+                        <div class="example-sentence">I like <span class="highlight">music</span>.</div>
+                        <div class="example-sentence">She put the book <span class="highlight">on the table</span>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 독해할 때 왜 중요한가? -->
+            <div class="guide-section">
+                <div class="section-title">
+                    <span class="title-icon">📖</span>
+                    <h4>독해할 때 왜 중요할까?</h4>
+                </div>
+                <div class="section-content">
+                    <div class="reading-example">
+                        <div class="reading-label">긴 문장도 짝을 찾으면 쉬워요!</div>
+                        <div class="long-sentence">
+                            <span class="chunk subj">The students who came late</span>
+                            <span class="chunk verb">were asked</span>
+                            <span class="chunk obj">to wait</span>
+                            <span class="chunk prep">in the hallway</span>
+                            <span class="chunk prep">until the end of the class</span>.
+                        </div>
+                        <div class="reading-analysis">
+                            <div class="analysis-item"><span class="tag subj">주어</span> 늦게 온 학생들이</div>
+                            <div class="analysis-item"><span class="tag verb">동사</span> 요청받았다</div>
+                            <div class="analysis-item"><span class="tag obj">목적어</span> 기다리라고</div>
+                            <div class="analysis-item"><span class="tag prep">전치사구</span> 복도에서 / 수업 끝날 때까지</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 최우선 3대장 -->
+            <div class="guide-section priority-section">
+                <div class="section-title">
+                    <span class="title-icon">🏆</span>
+                    <h4>최우선 3대장 (반드시 알아야 할 짝!)</h4>
+                </div>
+
+                <!-- 1. 주어+동사, 타동사+목적어 -->
+                <div class="pairing-card priority-1">
+                    <div class="card-header">
+                        <span class="card-num">1</span>
+                        <span class="card-title">주어 + 동사 / 타동사 + 목적어</span>
+                        <span class="card-priority">⭐⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="pair-explain">문장의 뼈대! 이게 없으면 문장 자체가 안 됩니다.</div>
+                        <table class="pair-table">
+                            <tr>
+                                <th>짝 유형</th>
+                                <th>예시</th>
+                            </tr>
+                            <tr>
+                                <td>주어 + 동사</td>
+                                <td><span class="subj">She</span> <span class="verb">runs</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>주어 + be + 보어</td>
+                                <td><span class="subj">He</span> <span class="verb">is</span> <span class="obj">a
+                                        doctor</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>타동사 + 목적어</td>
+                                <td>I <span class="verb">love</span> <span class="obj">music</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>수여동사 + 간접목 + 직접목</td>
+                                <td><span class="verb">Give</span> <span class="obj">me</span> <span class="obj2">a
+                                        book</span>.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. 전치사 + 목적어 -->
+                <div class="pairing-card priority-1">
+                    <div class="card-header">
+                        <span class="card-num">2</span>
+                        <span class="card-title">전치사 + 목적어</span>
+                        <span class="card-priority">⭐⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="pair-explain">전치사 뒤에는 <strong>반드시</strong> 명사/동명사가 와야 합니다!</div>
+                        <table class="pair-table">
+                            <tr>
+                                <th>전치사</th>
+                                <th>+ 목적어</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>in</td>
+                                <td>the room</td>
+                                <td>She is <span class="prep">in</span> <span class="obj">the room</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>at</td>
+                                <td>school</td>
+                                <td>I study <span class="prep">at</span> <span class="obj">school</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>for</td>
+                                <td>working</td>
+                                <td>Thank you <span class="prep">for</span> <span class="obj">helping</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>with</td>
+                                <td>my friends</td>
+                                <td>I went <span class="prep">with</span> <span class="obj">my friends</span>.</td>
+                            </tr>
+                        </table>
+                        <div class="warning-box">
+                            ⚠️ 전치사 뒤에 동사원형은 ❌ → <code>for help</code> (O) / <code>for to help</code> (X)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 특수 동사 패턴 -->
+                <div class="pairing-card priority-1">
+                    <div class="card-header">
+                        <span class="card-num">3</span>
+                        <span class="card-title">특수 동사 패턴 (A as B, A with B 등)</span>
+                        <span class="card-priority">⭐⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="pair-explain">수능/모의고사에서 <strong>거의 매 지문마다</strong> 등장하는 필수 패턴! 💯</div>
+
+                        <!-- A as B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A as B 패턴 (A를 B로 여기다)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>view A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 여기다</td>
+                                    <td>I <span class="verb">view</span> him <span class="prep">as</span> a hero.</td>
+                                </tr>
+                                <tr>
+                                    <td>regard A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 간주하다</td>
+                                    <td>They <span class="verb">regard</span> it <span class="prep">as</span> important.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>see A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 보다</td>
+                                    <td>I <span class="verb">see</span> this <span class="prep">as</span> an
+                                        opportunity.</td>
+                                </tr>
+                                <tr>
+                                    <td>consider A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 여기다</td>
+                                    <td>We <span class="verb">consider</span> him <span class="prep">as</span> a friend.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>describe A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 묘사하다</td>
+                                    <td>She <span class="verb">described</span> him <span class="prep">as</span>
+                                        brilliant.</td>
+                                </tr>
+                                <tr>
+                                    <td>define A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 정의하다</td>
+                                    <td>Experts <span class="verb">define</span> success <span class="prep">as</span>
+                                        happiness.</td>
+                                </tr>
+                                <tr>
+                                    <td>perceive A <span class="prep">as</span> B</td>
+                                    <td>A를 B로 인식하다</td>
+                                    <td>People <span class="verb">perceive</span> him <span class="prep">as</span>
+                                        honest.</td>
+                                </tr>
+                                <tr>
+                                    <td>refer to A <span class="prep">as</span> B</td>
+                                    <td>A를 B라고 칭하다</td>
+                                    <td>They <span class="verb">refer to</span> him <span class="prep">as</span> "the
+                                        king".</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A with B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A with B 패턴 (A에게 B를 제공/연결)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>provide A <span class="prep">with</span> B</td>
+                                    <td>A에게 B를 제공하다</td>
+                                    <td>He <span class="verb">provided</span> me <span class="prep">with</span> food.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>supply A <span class="prep">with</span> B</td>
+                                    <td>A에게 B를 공급하다</td>
+                                    <td>They <span class="verb">supply</span> us <span class="prep">with</span> water.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>associate A <span class="prep">with</span> B</td>
+                                    <td>A를 B와 연관짓다</td>
+                                    <td>People <span class="verb">associate</span> red <span class="prep">with</span>
+                                        danger.</td>
+                                </tr>
+                                <tr>
+                                    <td>replace A <span class="prep">with</span> B</td>
+                                    <td>A를 B로 대체하다</td>
+                                    <td>They <span class="verb">replaced</span> old <span class="prep">with</span> new.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>equip A <span class="prep">with</span> B</td>
+                                    <td>A에게 B를 갖추다</td>
+                                    <td>We <span class="verb">equipped</span> them <span class="prep">with</span> tools.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>present A <span class="prep">with</span> B</td>
+                                    <td>A에게 B를 주다</td>
+                                    <td>She <span class="verb">presented</span> him <span class="prep">with</span> a
+                                        gift.</td>
+                                </tr>
+                                <tr>
+                                    <td>fill A <span class="prep">with</span> B</td>
+                                    <td>A를 B로 채우다</td>
+                                    <td>He <span class="verb">filled</span> the cup <span class="prep">with</span>
+                                        water.</td>
+                                </tr>
+                                <tr>
+                                    <td>compare A <span class="prep">with</span> B</td>
+                                    <td>A를 B와 비교하다</td>
+                                    <td>Don't <span class="verb">compare</span> me <span class="prep">with</span> him.
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A from B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A from B 패턴 (A를 B에서 막다/구별하다)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>prevent A <span class="prep">from</span> B</td>
+                                    <td>A가 B못하게 막다</td>
+                                    <td>Rain <span class="verb">prevented</span> us <span class="prep">from</span>
+                                        going.</td>
+                                </tr>
+                                <tr>
+                                    <td>stop A <span class="prep">from</span> B</td>
+                                    <td>A가 B하는 걸 막다</td>
+                                    <td>Nothing can <span class="verb">stop</span> me <span class="prep">from</span>
+                                        trying.</td>
+                                </tr>
+                                <tr>
+                                    <td>keep A <span class="prep">from</span> B</td>
+                                    <td>A가 B하는 걸 막다</td>
+                                    <td>I <span class="verb">kept</span> him <span class="prep">from</span> leaving.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>distinguish A <span class="prep">from</span> B</td>
+                                    <td>A와 B를 구별하다</td>
+                                    <td>Can you <span class="verb">distinguish</span> good <span
+                                            class="prep">from</span> evil?</td>
+                                </tr>
+                                <tr>
+                                    <td>differ A <span class="prep">from</span> B</td>
+                                    <td>A가 B와 다르다</td>
+                                    <td>This <span class="verb">differs</span> <span class="prep">from</span> that.</td>
+                                </tr>
+                                <tr>
+                                    <td>separate A <span class="prep">from</span> B</td>
+                                    <td>A를 B에서 분리하다</td>
+                                    <td>They <span class="verb">separated</span> him <span class="prep">from</span> his
+                                        family.</td>
+                                </tr>
+                                <tr>
+                                    <td>protect A <span class="prep">from</span> B</td>
+                                    <td>A를 B로부터 보호하다</td>
+                                    <td>Masks <span class="verb">protect</span> us <span class="prep">from</span>
+                                        viruses.</td>
+                                </tr>
+                                <tr>
+                                    <td>prohibit A <span class="prep">from</span> B</td>
+                                    <td>A가 B하는 것을 금지하다</td>
+                                    <td>The law <span class="verb">prohibits</span> them <span class="prep">from</span>
+                                        smoking.</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A to B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A to B 패턴 (A를 B에 귀속/비교)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>attribute A <span class="prep">to</span> B</td>
+                                    <td>A를 B의 탓으로 돌리다</td>
+                                    <td>She <span class="verb">attributed</span> success <span class="prep">to</span>
+                                        luck.</td>
+                                </tr>
+                                <tr>
+                                    <td>owe A <span class="prep">to</span> B</td>
+                                    <td>A는 B 덕분이다</td>
+                                    <td>I <span class="verb">owe</span> my success <span class="prep">to</span> you.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>compare A <span class="prep">to</span> B</td>
+                                    <td>A를 B에 비유하다</td>
+                                    <td>He <span class="verb">compared</span> life <span class="prep">to</span> a
+                                        journey.</td>
+                                </tr>
+                                <tr>
+                                    <td>prefer A <span class="prep">to</span> B</td>
+                                    <td>B보다 A를 선호하다</td>
+                                    <td>I <span class="verb">prefer</span> tea <span class="prep">to</span> coffee.</td>
+                                </tr>
+                                <tr>
+                                    <td>add A <span class="prep">to</span> B</td>
+                                    <td>A를 B에 추가하다</td>
+                                    <td>Please <span class="verb">add</span> sugar <span class="prep">to</span> my tea.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>apply A <span class="prep">to</span> B</td>
+                                    <td>A를 B에 적용하다</td>
+                                    <td>They <span class="verb">applied</span> the rule <span class="prep">to</span>
+                                        everyone.</td>
+                                </tr>
+                                <tr>
+                                    <td>devote A <span class="prep">to</span> B</td>
+                                    <td>A를 B에 바치다</td>
+                                    <td>She <span class="verb">devoted</span> her life <span class="prep">to</span>
+                                        science.</td>
+                                </tr>
+                                <tr>
+                                    <td>expose A <span class="prep">to</span> B</td>
+                                    <td>A를 B에 노출시키다</td>
+                                    <td>Don't <span class="verb">expose</span> yourself <span class="prep">to</span>
+                                        danger.</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A of B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A of B 패턴 (A에게 B를 알리다/빼앗다)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>remind A <span class="prep">of</span> B</td>
+                                    <td>A에게 B를 상기시키다</td>
+                                    <td>This <span class="verb">reminds</span> me <span class="prep">of</span> home.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>inform A <span class="prep">of</span> B</td>
+                                    <td>A에게 B를 알리다</td>
+                                    <td>Please <span class="verb">inform</span> me <span class="prep">of</span> the
+                                        result.</td>
+                                </tr>
+                                <tr>
+                                    <td>convince A <span class="prep">of</span> B</td>
+                                    <td>A에게 B를 확신시키다</td>
+                                    <td>He <span class="verb">convinced</span> me <span class="prep">of</span> his
+                                        innocence.</td>
+                                </tr>
+                                <tr>
+                                    <td>accuse A <span class="prep">of</span> B</td>
+                                    <td>A를 B로 비난/고발하다</td>
+                                    <td>They <span class="verb">accused</span> him <span class="prep">of</span> theft.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>deprive A <span class="prep">of</span> B</td>
+                                    <td>A에게서 B를 빼앗다</td>
+                                    <td>War <span class="verb">deprived</span> them <span class="prep">of</span>
+                                        freedom.</td>
+                                </tr>
+                                <tr>
+                                    <td>rob A <span class="prep">of</span> B</td>
+                                    <td>A에게서 B를 빼앗다</td>
+                                    <td>They <span class="verb">robbed</span> me <span class="prep">of</span> my wallet.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>cure A <span class="prep">of</span> B</td>
+                                    <td>A의 B를 치료하다</td>
+                                    <td>The doctor <span class="verb">cured</span> him <span class="prep">of</span> the
+                                        disease.</td>
+                                </tr>
+                                <tr>
+                                    <td>suspect A <span class="prep">of</span> B</td>
+                                    <td>A를 B로 의심하다</td>
+                                    <td>Police <span class="verb">suspect</span> him <span class="prep">of</span>
+                                        murder.</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A into B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A into B 패턴 (A를 B로 변환)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>transform A <span class="prep">into</span> B</td>
+                                    <td>A를 B로 변환하다</td>
+                                    <td>They <span class="verb">transformed</span> the room <span
+                                            class="prep">into</span> an office.</td>
+                                </tr>
+                                <tr>
+                                    <td>turn A <span class="prep">into</span> B</td>
+                                    <td>A를 B로 바꾸다</td>
+                                    <td>Hard work <span class="verb">turned</span> him <span class="prep">into</span> a
+                                        star.</td>
+                                </tr>
+                                <tr>
+                                    <td>divide A <span class="prep">into</span> B</td>
+                                    <td>A를 B로 나누다</td>
+                                    <td>She <span class="verb">divided</span> the cake <span class="prep">into</span> 8
+                                        pieces.</td>
+                                </tr>
+                                <tr>
+                                    <td>translate A <span class="prep">into</span> B</td>
+                                    <td>A를 B로 번역하다</td>
+                                    <td>Please <span class="verb">translate</span> this <span class="prep">into</span>
+                                        English.</td>
+                                </tr>
+                                <tr>
+                                    <td>put A <span class="prep">into</span> B</td>
+                                    <td>A를 B에 넣다</td>
+                                    <td>She <span class="verb">put</span> money <span class="prep">into</span> the bank.
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- A for B 패턴 -->
+                        <div class="pattern-group">
+                            <div class="pattern-group-title">📌 A for B 패턴 (A에게 B로 인해)</div>
+                            <table class="pair-table special-verbs">
+                                <tr>
+                                    <th>패턴</th>
+                                    <th>의미</th>
+                                    <th>예문</th>
+                                </tr>
+                                <tr>
+                                    <td>thank A <span class="prep">for</span> B</td>
+                                    <td>A에게 B로 감사하다</td>
+                                    <td>I <span class="verb">thank</span> you <span class="prep">for</span> your help.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>blame A <span class="prep">for</span> B</td>
+                                    <td>A를 B로 비난하다</td>
+                                    <td>Don't <span class="verb">blame</span> me <span class="prep">for</span> this.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>praise A <span class="prep">for</span> B</td>
+                                    <td>A를 B로 칭찬하다</td>
+                                    <td>She <span class="verb">praised</span> him <span class="prep">for</span> his
+                                        effort.</td>
+                                </tr>
+                                <tr>
+                                    <td>punish A <span class="prep">for</span> B</td>
+                                    <td>A를 B로 처벌하다</td>
+                                    <td>They <span class="verb">punished</span> him <span class="prep">for</span> lying.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>forgive A <span class="prep">for</span> B</td>
+                                    <td>A를 B로 용서하다</td>
+                                    <td>Please <span class="verb">forgive</span> me <span class="prep">for</span> the
+                                        mistake.</td>
+                                </tr>
+                                <tr>
+                                    <td>ask A <span class="prep">for</span> B</td>
+                                    <td>A에게 B를 요청하다</td>
+                                    <td>I <span class="verb">asked</span> him <span class="prep">for</span> help.</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="warning-box"
+                            style="background: rgba(16, 185, 129, 0.1); border-color: var(--secondary); color: var(--secondary);">
+                            💡 총 56개 패턴! 수능 필수 동사 패턴을 모두 정리했어요!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중요도 2순위 -->
+            <div class="guide-section">
+                <div class="section-title">
+                    <span class="title-icon">📌</span>
+                    <h4>중요도 2순위 (자주 나오는 짝)</h4>
+                </div>
+
+                <!-- 5형식 동사 패턴 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">4</span>
+                        <span class="card-title">5형식 동사 패턴</span>
+                        <span class="card-priority">⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>패턴</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>V + O + OC (형용사)</td>
+                                <td>It made <span class="obj">me</span> <span class="highlight">happy</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>지각동사 + O + 원형/ing</td>
+                                <td>I saw <span class="obj">him</span> <span class="highlight">run/running</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>사역동사 + O + 원형</td>
+                                <td>She made <span class="obj">him</span> <span class="highlight">cry</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>want/ask + O + to V</td>
+                                <td>I want <span class="obj">you</span> <span class="highlight">to come</span>.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 접속사 짝 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">5</span>
+                        <span class="card-title">접속사 / 상관접속사 짝</span>
+                        <span class="card-priority">⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>상관접속사</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>both A <span class="prep">and</span> B</td>
+                                <td>I like <span class="highlight">both</span> tea <span class="prep">and</span> coffee.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>either A <span class="prep">or</span> B</td>
+                                <td><span class="highlight">Either</span> you <span class="prep">or</span> I am wrong.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>neither A <span class="prep">nor</span> B</td>
+                                <td><span class="highlight">Neither</span> he <span class="prep">nor</span> she came.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>not only A <span class="prep">but also</span> B</td>
+                                <td>She is <span class="highlight">not only</span> smart <span class="prep">but
+                                        also</span> kind.</td>
+                            </tr>
+                            <tr>
+                                <td>not A <span class="prep">but</span> B</td>
+                                <td><span class="highlight">Not</span> luck <span class="prep">but</span> effort
+                                    matters.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- to부정사/동명사 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">6</span>
+                        <span class="card-title">to부정사 / 동명사 짝</span>
+                        <span class="card-priority">⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>유형</th>
+                                <th>동사들</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>to부정사만</td>
+                                <td>want, hope, decide, plan</td>
+                                <td>I <span class="verb">want</span> <span class="highlight">to go</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>동명사만</td>
+                                <td>enjoy, avoid, mind, finish</td>
+                                <td>I <span class="verb">enjoy</span> <span class="highlight">swimming</span>.</td>
+                            </tr>
+                            <tr>
+                                <td>의미 달라짐</td>
+                                <td>remember, forget, stop</td>
+                                <td><span class="verb">remember</span> <span class="highlight">to do</span> vs <span
+                                        class="highlight">doing</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중요도 3순위 -->
+            <div class="guide-section">
+                <div class="section-title">
+                    <span class="title-icon">📎</span>
+                    <h4>중요도 3순위 (알아두면 좋은 짝)</h4>
+                </div>
+
+                <!-- 비교 구문 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">7</span>
+                        <span class="card-title">비교 구문 짝</span>
+                        <span class="card-priority">⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>패턴</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>as + 원급 + <span class="prep">as</span></td>
+                                <td>He is <span class="highlight">as tall as</span> me.</td>
+                            </tr>
+                            <tr>
+                                <td>비교급 + <span class="prep">than</span></td>
+                                <td>She is <span class="highlight">taller than</span> him.</td>
+                            </tr>
+                            <tr>
+                                <td>the 비교급, the 비교급</td>
+                                <td><span class="highlight">The more</span>, <span class="highlight">the better</span>.
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 관계사 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">8</span>
+                        <span class="card-title">관계사 짝</span>
+                        <span class="card-priority">⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>선행사</th>
+                                <th>관계사</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>사람</td>
+                                <td>who/whom/whose</td>
+                                <td>The man <span class="highlight">who</span> came is my father.</td>
+                            </tr>
+                            <tr>
+                                <td>사물</td>
+                                <td>which/that</td>
+                                <td>The book <span class="highlight">which</span> I bought is good.</td>
+                            </tr>
+                            <tr>
+                                <td>장소/시간</td>
+                                <td>where/when</td>
+                                <td>The place <span class="highlight">where</span> I live is quiet.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 분사 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">9</span>
+                        <span class="card-title">분사 짝</span>
+                        <span class="card-priority">⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="pair-table">
+                            <tr>
+                                <th>유형</th>
+                                <th>의미</th>
+                                <th>예문</th>
+                            </tr>
+                            <tr>
+                                <td>현재분사 + 명사</td>
+                                <td>~하는 (능동)</td>
+                                <td>a <span class="highlight">sleeping</span> baby</td>
+                            </tr>
+                            <tr>
+                                <td>과거분사 + 명사</td>
+                                <td>~된 (수동)</td>
+                                <td>a <span class="highlight">broken</span> window</td>
+                            </tr>
+                            <tr>
+                                <td>-ing (감정 유발)</td>
+                                <td>~하게 하는</td>
+                                <td>an <span class="highlight">exciting</span> game</td>
+                            </tr>
+                            <tr>
+                                <td>-ed (감정 느낌)</td>
+                                <td>~한 느낌의</td>
+                                <td>I am <span class="highlight">excited</span>.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 병렬 구조 -->
+                <div class="pairing-card">
+                    <div class="card-header">
+                        <span class="card-num">10</span>
+                        <span class="card-title">병렬 구조 짝</span>
+                        <span class="card-priority">⭐⭐⭐</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="pair-explain">and/or/but로 연결된 요소는 <strong>같은 형태</strong>여야 합니다!</div>
+                        <table class="pair-table">
+                            <tr>
+                                <th>❌ 틀림</th>
+                                <th>✅ 맞음</th>
+                            </tr>
+                            <tr>
+                                <td>to swim and <span class="wrong">running</span></td>
+                                <td>to swim and <span class="correct">to run</span></td>
+                            </tr>
+                            <tr>
+                                <td>patience and <span class="wrong">to be kind</span></td>
+                                <td>patience and <span class="correct">kindness</span></td>
+                            </tr>
+                            <tr>
+                                <td>quickly and <span class="wrong">with care</span></td>
+                                <td>quickly and <span class="correct">carefully</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 요약 -->
+            <div class="guide-summary">
+                <h4>📊 한눈에 보는 중요도</h4>
+                <div class="summary-table">
+                    <div class="summary-row priority-high">
+                        <span class="priority-label">1순위</span>
+                        <span class="priority-content">주어+동사, 전치사+목적어, 특수동사패턴</span>
+                    </div>
+                    <div class="summary-row priority-mid">
+                        <span class="priority-label">2순위</span>
+                        <span class="priority-content">5형식, 접속사, to부정사/동명사</span>
+                    </div>
+                    <div class="summary-row priority-low">
+                        <span class="priority-label">3순위</span>
+                        <span class="priority-content">비교, 관계사, 분사, 병렬구조</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guide-cta">
+                <button class="primary-btn" onclick="showModeSelect()">
+                    <span>🎮</span> 이제 연습하러 가기!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 짝 개념 소개 팝업 모달 -->
+    <div id="pairing-intro-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-icon">💡</span>
+                <h3>잠깐! 알고 시작하면 더 쉬워요</h3>
+            </div>
+            <div class="modal-body">
+                <div class="modal-message">
+                    <p>영어는 <strong>짝 개념</strong>이 핵심이에요!</p>
+                    <ul>
+                        <li>🔗 <strong>주어</strong>에는 반드시 <strong>동사</strong>가 따라와요</li>
+                        <li>🔗 <strong>타동사</strong>에는 <strong>목적어</strong>가 필수예요</li>
+                        <li>🔗 <strong>전치사</strong> 뒤에는 <strong>명사</strong>가 와야 해요</li>
+                    </ul>
+                    <p class="modal-tip">이 짝을 찾으면 순서 맞추기가 훨씬 쉬워져요! 🎯</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary-btn" onclick="goToGuideFromModal()">
+                    <span>📖</span> 자세히 알아보기
+                </button>
+                <button class="primary-btn" onclick="startWithoutPopup()">
+                    <span>🚀</span> 바로 시작하기
+                </button>
+            </div>
+            <label class="modal-checkbox">
+                <input type="checkbox" id="dont-show-again">
+                <span>다시 보지 않기</span>
+            </label>
+        </div>
+    </div>
+
+    <script src="app.js?v=20260214b"></script>
+</body>
+
+</html>
