@@ -784,6 +784,7 @@ function setupTouchEvents() {
 // ==========================================
 let currentAttempts = 0;
 let currentErrors = [];
+let lastWrongSentence = '';
 
 function checkAnswer() {
     const answerZone = document.getElementById('answer-zone');
@@ -825,11 +826,12 @@ function checkAnswer() {
             hintsUsed: state.hintsUsed,
             time: timeSpent,
             errors: [...currentErrors],
-            studentAnswer: currentOrder.join(' ')
+            studentAnswer: lastWrongSentence
         });
 
         currentAttempts = 0;
         currentErrors = [];
+        lastWrongSentence = '';
 
         showFeedback('success', '🎉 정답입니다! 훌륭해요!');
 
@@ -839,6 +841,9 @@ function checkAnswer() {
     } else {
         state.wrongAttempts++;
         state.currentStageAttempts++;
+
+        // 오답 전체 문장 저장 (정답 맞추기 전 상태를 보존)
+        lastWrongSentence = currentOrder.join(' ');
 
         // Track specific errors
         currentOrder.forEach((word, index) => {
