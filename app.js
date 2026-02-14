@@ -885,6 +885,7 @@ function checkAnswer() {
 
             currentAttempts = 0;
             currentErrors = [];
+            lastWrongSentence = '';
         } else {
             // Get smart pairing hint based on the error
             const sentence = state.sentences[state.currentSentenceIndex].english;
@@ -909,6 +910,7 @@ function skipToNext() {
     state.currentStageAttempts = 0;
     currentAttempts = 0;
     currentErrors = [];
+    lastWrongSentence = '';
     advanceProgress();
 }
 
@@ -2567,6 +2569,7 @@ function restartLearning() {
     state.results = [];
     currentAttempts = 0;
     currentErrors = [];
+    lastWrongSentence = '';
 
     showLearning();
     loadCurrentSentence();
@@ -2590,6 +2593,7 @@ function resetState() {
     state.results = [];
     currentAttempts = 0;
     currentErrors = [];
+    lastWrongSentence = '';
 }
 
 // Add shake animation CSS dynamically
