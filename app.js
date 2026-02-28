@@ -997,102 +997,158 @@ function copyMDReport() {
  * @returns {{ transpositions: Array, misplaced: Array, summary: string }}
  */
 function detectChunkTranspositions(studentWords, correctWords, originalChunks) {
-    // 정답을 청크 단위로 세그먼트화
-    // 각 청크가 correctWords 안에서 차지하는 인덱스 범위를 구한다
-    let segments = [];
-    if (originalChunks && originalChunks.length > 0) {
-        let pos = 0;
-        for (const chunk of originalChunks) {
-            const chunkWords = chunk.trim().replace(/[.,!?]/g, '').split(/\s+/).filter(w => w);
-            if (chunkWords.length === 0) continue;
-            // 정답 배열에서 이 청크가 시작하는 위치 탐색
-            let found = -1;
-            for (let s = pos; s <= correctWords.length - chunkWords.length; s++) {
-                const slice = correctWords.slice(s, s + chunkWords.length)
-                    .map(w => w.toLowerCase().replace(/[.,!?]/g, ''));
-                const cw = chunkWords.map(w => w.toLowerCase());
-                if (JSON.stringify(slice) === JSON.stringify(cw)) {
-                    found = s;
-                    break;
-                }
-            }
-            if (found >= 0) {
-                segments.push({ label: chunk, startIdx: found, endIdx: found + chunkWords.length - 1 });
-                pos = found + chunkWords.length;
-            } else {
-                // fallback: 하나짜리 단어 청크로 처리
-                segments.push({ label: chunk, startIdx: pos, endIdx: pos });
-                pos++;
-            }
-        }
-    } else {
-        // 청크 정보가 없으면 correctWords 각 항목이 곧 청크 (2/3단계)
-        segments = correctWords.map((w, i) => ({ label: w, startIdx: i, endIdx: i }));
-    }
+    // 청크 목록 정제: 없으면 correctWords 각 항목을 청크로
+    const chunks = (originalChunks && originalChunks.length > 0)
+        ? originalChunks
+        : correctWords;
 
-    // 각 청크가 학생 답에서 차지하는 실제 시작 위치를 찾는다
-    const studentLower = studentWords.map(w => w.toLowerCase().replace(/[.,!?]/g, ''));
-    const usedPositions = new Set();
+    // 표준화 헬퍼
+    const norm = w => w.toLowerCase().replace(/[.,!?;:'"]/g, '').trim();
+    const normArr = arr => arr.map(norm);
 
-    const segWithStudentPos = segments.map(seg => {
-        const chunkWords = seg.label.trim().replace(/[.,!?]/g, '').split(/\s+/).filter(w => w)
-            .map(w => w.toLowerCase());
-        let studentStart = -1;
-        for (let s = 0; s <= studentLower.length - chunkWords.length; s++) {
-            if (usedPositions.has(s)) continue;
-            const slice = studentLower.slice(s, s + chunkWords.length);
+    const studentNorm = normArr(studentWords);
+
+    // ============================================================
+    // Step 1: 각 청크 상태 분류 (INTACT / BROKEN / MISSING)
+    // ============================================================
+    const classified = chunks.map((chunk, correctIdx) => {
+        const chunkWords = norm(chunk).split(/\s+/).filter(w => w);
+        if (chunkWords.length === 0) return { chunk, status: 'MISSING', correctIdx, studentPos: -1 };
+
+        // ---- 1a. INTACT 확인: studentNorm에 콘티군어스로 연속되는지 확인
+        let studentPos = -1;
+        for (let s = 0; s <= studentNorm.length - chunkWords.length; s++) {
+            const slice = studentNorm.slice(s, s + chunkWords.length);
             if (JSON.stringify(slice) === JSON.stringify(chunkWords)) {
-                studentStart = s;
-                for (let k = s; k < s + chunkWords.length; k++) usedPositions.add(k);
+                studentPos = s;
                 break;
             }
         }
-        return { ...seg, studentStart };
+        if (studentPos >= 0) {
+            return { chunk, status: 'INTACT', correctIdx, studentPos };
+        }
+
+        // ---- 1b. BROKEN 확인: 단어는 있지만 흥어져 있음
+        const presentWords = chunkWords.filter(cw => studentNorm.includes(cw));
+        if (presentWords.length > 0) {
+            return { chunk, status: 'BROKEN', correctIdx, studentPos: -1, presentWords };
+        }
+
+        // ---- 1c. MISSING
+        return { chunk, status: 'MISSING', correctIdx, studentPos: -1 };
     });
 
-    // 청크 순서가 뒤바뀐 쌍을 탐지 (위치 기준 비교)
+    // ============================================================
+    // Step 2: 청크 보존율 계산 (단일 단어 청크는 제외)
+    // ============================================================
+    const multiChunks = classified.filter(c => {
+        const wc = norm(c.chunk).split(/\s+/).filter(w => w);
+        return wc.length > 1;
+    });
+    const intactMulti = multiChunks.filter(c => c.status === 'INTACT').length;
+    const preservationRatio = multiChunks.length > 0
+        ? intactMulti / multiChunks.length
+        : 1.0;
+    const preservationPct = Math.round(preservationRatio * 100);
+
+    // ============================================================
+    // Step 3: 보존율 50% 미만 → CHUNK_DESTROYED 반환
+    // ============================================================
+    if (preservationRatio < 0.5 && multiChunks.length >= 2) {
+        const preserved = classified
+            .filter(c => c.status === 'INTACT')
+            .map(c => c.chunk);
+        const broken = classified
+            .filter(c => c.status === 'BROKEN' || c.status === 'MISSING')
+            .map(c => c.chunk);
+        return {
+            type: 'CHUNK_DESTROYED',
+            transpositions: [],
+            misplaced: broken,
+            preserved,
+            preservationPct,
+            summary: `문장 구조 파악 실패 (청크 보존율 ${preservationPct}%) — 1단계부터 재학습 필요`
+        };
+    }
+
+    // ============================================================
+    // Step 4: INTACT 청크들의 순서 전도(transposition) 탐지
+    // ============================================================
+    // 중복 위치 방지를 위해 two-pass로 INTACT 청크의 위치를 포맰다
+    const usedPos = new Set();
+    const intactResolved = classified
+        .filter(c => c.status === 'INTACT')
+        .map(c => {
+            const chunkWords = norm(c.chunk).split(/\s+/).filter(w => w);
+            // 이미 사용된 위치를 피해서 소기에서 다시 탐색
+            let pos = -1;
+            for (let s = 0; s <= studentNorm.length - chunkWords.length; s++) {
+                if (usedPos.has(s)) continue;
+                const slice = studentNorm.slice(s, s + chunkWords.length);
+                if (JSON.stringify(slice) === JSON.stringify(chunkWords)) {
+                    pos = s;
+                    for (let k = s; k < s + chunkWords.length; k++) usedPos.add(k);
+                    break;
+                }
+            }
+            return { ...c, studentPos: pos };
+        });
+
+    // 정답 순서려 (correctIdx 기준)
+    const inCorrectOrder = [...intactResolved].sort((a, b) => a.correctIdx - b.correctIdx);
+    // 학생 순서로 (studentPos 기준)
+    const inStudentOrder = [...intactResolved]
+        .filter(c => c.studentPos >= 0)
+        .sort((a, b) => a.studentPos - b.studentPos);
+
+    const correctOrderLabels = inCorrectOrder.map(c => c.chunk);
+    const studentOrderLabels = inStudentOrder.map(c => c.chunk);
+
+    // 순열 비교로 전도된 쌍 추출
     const transpositions = [];
-    const n = segWithStudentPos.length;
-    for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-            const a = segWithStudentPos[i];
-            const b = segWithStudentPos[j];
-            // 정답에서 a가 먼저인데 학생 답에서 b가 먼저 오면 → 전도
-            if (a.studentStart >= 0 && b.studentStart >= 0 && b.studentStart < a.studentStart) {
-                if (!transpositions.some(t =>
-                    (t.chunkA === a.label && t.chunkB === b.label) ||
-                    (t.chunkA === b.label && t.chunkB === a.label)
-                )) {
+    for (let i = 0; i < studentOrderLabels.length; i++) {
+        if (studentOrderLabels[i] !== correctOrderLabels[i]) {
+            const correctIdx = correctOrderLabels.indexOf(studentOrderLabels[i]);
+            if (correctIdx > i) {
+                const already = transpositions.some(t =>
+                    (t.chunkA === correctOrderLabels[i] && t.chunkB === correctOrderLabels[correctIdx]) ||
+                    (t.chunkA === correctOrderLabels[correctIdx] && t.chunkB === correctOrderLabels[i])
+                );
+                if (!already) {
                     transpositions.push({
-                        chunkA: a.label,
-                        chunkB: b.label,
-                        correctOrder: `[${a.label}] → [${b.label}]`,
-                        studentOrder: `[${b.label}] → [${a.label}]`
+                        chunkA: correctOrderLabels[i],
+                        chunkB: correctOrderLabels[correctIdx],
+                        correctOrder: `[${correctOrderLabels[i]}] → [${correctOrderLabels[correctIdx]}]`,
+                        studentOrder: `[${correctOrderLabels[correctIdx]}] → [${correctOrderLabels[i]}]`
                     });
                 }
             }
         }
     }
 
-    // 완전히 위치를 못 찾은 청크 (학생이 분해해버린 경우)
-    const misplaced = segWithStudentPos
-        .filter(s => s.studentStart < 0)
-        .map(s => s.label);
+    // BROKEN 청크 목록
+    const brokenChunks = classified
+        .filter(c => c.status === 'BROKEN')
+        .map(c => c.chunk);
 
-    // 요약 문장 생성
+    // 요약 생성
     let summary = '';
     if (transpositions.length > 0) {
-        summary = transpositions.map(t =>
-            `[${t.chunkA}] ↔ [${t.chunkB}] 순서 전도`
-        ).join('; ');
+        summary = transpositions.map(t => `[${t.chunkA}] ↔ [${t.chunkB}] 순서 전도`).join('; ');
     }
-    if (misplaced.length > 0) {
+    if (brokenChunks.length > 0) {
         if (summary) summary += '; ';
-        summary += `[${misplaced.join(', ')}] 위치 불명확`;
+        summary += `[${brokenChunks.join(', ')}] 내부 해체`;
     }
-    if (!summary) summary = '청크 순서는 유사하나 세부 어순 오류';
+    if (!summary) summary = '청크 순서 유사, 세부 어순 오류';
 
-    return { transpositions, misplaced, summary };
+    return {
+        type: transpositions.length > 0 ? 'CHUNK_TRANSPOSITION' : 'CHUNK_INTACT_ERROR',
+        transpositions,
+        misplaced: brokenChunks,
+        preservationPct,
+        summary
+    };
 }
 
 // ==========================================
@@ -1150,25 +1206,33 @@ function generateMDReport() {
                 md += '- ' + sl + ': ✅ 정답 (' + r.attempts + '회 시도, ' + r.time + '초)\n';
             } else if (r.skipped) {
                 md += '- ' + sl + ': ❌ 스킵 (최대 시도 초과)\n';
-                // 정답 vs 학생 답
                 if (r.studentAnswer) {
                     md += '  - **정답**: ' + s.english.replace(/[.,!?]/g, '') + '\n';
                     md += '  - **학생 답**: ' + r.studentAnswer + '\n';
                 }
-                // 청크 전도 분석 (구조화된 오류 정보)
-                if (r.errors && r.errors.length > 0 && r.errors[0].transpositions !== undefined) {
-                    const analysis = r.errors[0];
-                    if (analysis.transpositions.length > 0) {
-                        md += '  - **전도 구간**:\n';
-                        analysis.transpositions.forEach(t => {
-                            md += '    - 정답 순서: ' + t.correctOrder + '\n';
-                            md += '    - 학생 순서: ' + t.studentOrder + '\n';
-                        });
+                if (r.errors && r.errors.length > 0 && r.errors[0].type !== undefined) {
+                    const a = r.errors[0];
+                    if (a.type === 'CHUNK_DESTROYED') {
+                        md += '  - **분석 유형**: `CHUNK_DESTROYED`\n';
+                        md += '  - **청크 보존율**: ' + (a.preservationPct || 0) + '%\n';
+                        if (a.preserved && a.preserved.length > 0)
+                            md += '  - **보존된 부분**: ' + a.preserved.join(', ') + '\n';
+                        md += '  - **권장**: 1단계(청크 배열)부터 재학습 필요\n';
+                        md += '  - **요약**: ' + a.summary + '\n';
+                    } else if (a.type === 'CHUNK_TRANSPOSITION' || a.type === 'CHUNK_INTACT_ERROR') {
+                        md += '  - **분석 유형**: `' + a.type + '`\n';
+                        md += '  - **청크 보존율**: ' + (a.preservationPct || 0) + '%\n';
+                        if (a.transpositions && a.transpositions.length > 0) {
+                            md += '  - **전도 구간**:\n';
+                            a.transpositions.forEach(t => {
+                                md += '    - 정답 순서: ' + t.correctOrder + '\n';
+                                md += '    - 학생 순서: ' + t.studentOrder + '\n';
+                            });
+                        }
+                        if (a.misplaced && a.misplaced.length > 0)
+                            md += '  - **청크 해체**: ' + a.misplaced.join(', ') + '\n';
+                        md += '  - **요약**: ' + a.summary + '\n';
                     }
-                    if (analysis.misplaced.length > 0) {
-                        md += '  - **위치 불명확 청크**: ' + analysis.misplaced.join(', ') + '\n';
-                    }
-                    md += '  - **오류 요약**: ' + analysis.summary + '\n';
                 }
             }
         });
