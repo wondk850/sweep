@@ -976,16 +976,28 @@ body {
    Result Screen
    ======================================== */
 #result-screen {
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     padding: 24px;
     background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 50%, var(--bg-dark) 100%);
+    overflow-y: auto;
 }
 
 .result-container {
     width: 100%;
-    max-width: 400px;
+    max-width: 760px;
     text-align: center;
+}
+
+/* 상세 피드백은 왼쪽 정렬 유지 */
+.result-container .feedback-analysis {
+    text-align: left;
+}
+
+/* 결과 액션 버튼: wrap 허용 */
+.result-actions {
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .result-header {
