@@ -1052,9 +1052,12 @@ function detectChunkTranspositions(studentWords, correctWords, originalChunks) {
     const preservationPct = Math.round(preservationRatio * 100);
 
     // ============================================================
-    // Step 3: 보존율 50% 미만 → CHUNK_DESTROYED 반환
+    // Step 3: 보존율 기준 조기 탈출
+    //   < 30%  → CHUNK_DESTROYED (문장 전체 빭귀)
+    //   30-69% → CHUNK_PARTIAL   (부분 해체, 보존된 청크로 전도 분석함)
+    //   70%+   → CHUNK_TRANSPOSITION (몇 순서만 다름)
     // ============================================================
-    if (preservationRatio < 0.5 && multiChunks.length >= 2) {
+    if (preservationRatio < 0.30 && multiChunks.length >= 2) {
         const preserved = classified
             .filter(c => c.status === 'INTACT')
             .map(c => c.chunk);
@@ -1143,7 +1146,9 @@ function detectChunkTranspositions(studentWords, correctWords, originalChunks) {
     if (!summary) summary = '청크 순서 유사, 세부 어순 오류';
 
     return {
-        type: transpositions.length > 0 ? 'CHUNK_TRANSPOSITION' : 'CHUNK_INTACT_ERROR',
+        type: preservationRatio >= 0.70 ? 'CHUNK_TRANSPOSITION'
+            : preservationRatio >= 0.30 ? 'CHUNK_PARTIAL'
+                : 'CHUNK_INTACT_ERROR',
         transpositions,
         misplaced: brokenChunks,
         preservationPct,
@@ -1218,6 +1223,20 @@ function generateMDReport() {
                         if (a.preserved && a.preserved.length > 0)
                             md += '  - **보존된 부분**: ' + a.preserved.join(', ') + '\n';
                         md += '  - **권장**: 1단계(청크 배열)부터 재학습 필요\n';
+                        md += '  - **요약**: ' + a.summary + '\n';
+                    } else if (a.type === 'CHUNK_PARTIAL') {
+                        md += '  - **분석 유형**: `CHUNK_PARTIAL`\n';
+                        md += '  - **청크 보존율**: ' + (a.preservationPct || 0) + '% (일부 청크 해체)\n';
+                        if (a.transpositions && a.transpositions.length > 0) {
+                            md += '  - **전도 구간**:\n';
+                            a.transpositions.forEach(t => {
+                                md += '    - 정답 순서: ' + t.correctOrder + '\n';
+                                md += '    - 학생 순서: ' + t.studentOrder + '\n';
+                            });
+                        }
+                        if (a.misplaced && a.misplaced.length > 0)
+                            md += '  - **해체된 청크**: ' + a.misplaced.join(', ') + '\n';
+                        md += '  - **권장**: 해체된 청크 중심으로 어순 교정 + SWEEP 2단계 재도전\n';
                         md += '  - **요약**: ' + a.summary + '\n';
                     } else if (a.type === 'CHUNK_TRANSPOSITION' || a.type === 'CHUNK_INTACT_ERROR') {
                         md += '  - **분석 유형**: `' + a.type + '`\n';
