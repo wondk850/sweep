@@ -4,7 +4,7 @@ title Sweep - English Arrangement App
 
 echo.
 echo  ========================================================
-echo    Sweep - v2.1 (Grammar Hints + Reset Button)
+echo    Sweep - v4.0 (청크 오답 분석 + MD 결과지 + TTS 설정)
 echo    Made by Wonsummer Studio
 echo  ========================================================
 echo.
