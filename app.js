@@ -966,6 +966,23 @@ function skipToNext() {
     advanceProgress();
 }
 
+function copyMDReport() {
+    if (!state.results || state.results.length === 0) {
+        alert('학습을 먼저 완료해주세요!');
+        return;
+    }
+    const md = generateMDReport();
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(md).then(() => {
+            alert('📋 MD 리포트가 클립보드에 복사되었습니다!\n\nGemini에 직접 붙여넣기 하세요.');
+        }).catch(() => {
+            prompt('MD 리포트 (Ctrl+A 후 복사):', md);
+        });
+    } else {
+        prompt('MD 리포트 (Ctrl+A 후 복사):', md);
+    }
+}
+
 // ==========================================
 // MD Report & Export
 // ==========================================
@@ -1994,7 +2011,7 @@ function generateDetailedFeedback() {
 
     let feedbackHTML = '<div class="feedback-analysis" id="feedback-capture-area">';
 
-    // Header with capture button
+    // Header (캡쳐 버튼 제거 - 하단 MD 복사/저장 버튼으로 대체)
     feedbackHTML += `
         <div class="feedback-header">
             <h2>📋 학습 진단 리포트</h2>
@@ -2002,9 +2019,6 @@ function generateDetailedFeedback() {
                 <span>📅 ${dateStr}</span>
                 <span>📝 ${state.sentences.length}문장</span>
             </div>
-            <button class="capture-btn" onclick="captureResults()">
-                <span>📸</span> 결과 캡쳐
-            </button>
         </div>
     `;
 

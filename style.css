@@ -1357,8 +1357,6 @@ body {
 .detailed-feedback {
     margin-top: 20px;
     text-align: left;
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .feedback-analysis {
