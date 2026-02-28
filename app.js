@@ -238,7 +238,31 @@ function getRandomSetting() {
 
 function getAttemptLimitSetting() {
     const limitedCheck = document.getElementById('attempt-limited');
-    return limitedCheck?.checked ? 3 : 0;  // 0 = unlimited, 3 = 3 attempts
+    if (!limitedCheck?.checked) return 0;  // 0 = unlimited
+    const countVal = parseInt(document.getElementById('attempt-count-value')?.value) || 3;
+    return countVal;
+}
+
+function getTTSSetting() {
+    if (document.getElementById('tts-none')?.checked) return 'none';
+    if (document.getElementById('tts-free')?.checked) return 'free';
+    return 'after-correct';  // default
+}
+
+function toggleAttemptCount() {
+    const limited = document.getElementById('attempt-limited')?.checked;
+    const group = document.getElementById('attempt-count-group');
+    if (group) group.style.display = limited ? 'block' : 'none';
+}
+
+function changeAttemptCount(delta) {
+    const input = document.getElementById('attempt-count-value');
+    const display = document.getElementById('attempt-count-display');
+    if (!input || !display) return;
+    let val = parseInt(input.value) + delta;
+    val = Math.max(2, Math.min(6, val));
+    input.value = val;
+    display.textContent = val + '회';
 }
 
 function getProgressModeSetting() {
@@ -281,9 +305,6 @@ function actuallyStartSession() {
         state.sentences = shuffleArray([...state.sentences]);
     }
 
-    // Clear pending settings
-    state.pendingSessionSettings = null;
-
     state.isSessionActive = true;
     state.currentSentenceIndex = 0;
     state.currentStage = state.selectedStages[0];
@@ -299,6 +320,12 @@ function actuallyStartSession() {
 
     // Get progression mode setting
     state.progressMode = state.pendingSessionSettings?.progressMode ?? getProgressModeSetting();
+
+    // Get TTS mode setting
+    state.ttsMode = state.pendingSessionSettings?.ttsMode ?? getTTSSetting();
+
+    // Clear pending settings
+    state.pendingSessionSettings = null;
 
     showLearning();
     loadCurrentSentence();
@@ -361,6 +388,7 @@ function generateShareLink() {
     const randomOrder = getRandomSetting();
     const attemptLimit = getAttemptLimitSetting();
     const progressMode = getProgressModeSetting();
+    const ttsMode = getTTSSetting();
 
     const shareData = {
         sentences: state.sentences.map(s => s.english),
@@ -368,7 +396,8 @@ function generateShareLink() {
         timer: timerSettings.enabled ? timerSettings.seconds : 0,
         random: randomOrder,
         attemptLimit: attemptLimit,
-        progressMode: progressMode
+        progressMode: progressMode,
+        ttsMode: ttsMode
     };
 
     const encoded = btoa(encodeURIComponent(JSON.stringify(shareData)));
@@ -380,7 +409,8 @@ function generateShareLink() {
         const randomText = randomOrder ? ', 랜덤 순서' : '';
         const limitText = attemptLimit > 0 ? `, ${attemptLimit}회 제한` : '';
         const modeText = progressMode === 'cycle' ? ', 순환모드' : '';
-        alert(`✅ 링크가 복사되었습니다!\n\n설정: ${stageText}${timerText}${randomText}${limitText}${modeText}\n문장: ${state.sentences.length}개`);
+        const ttsText = ttsMode === 'none' ? ', 소리없음' : ttsMode === 'free' ? ', 자유청취' : ', 정답후재생';
+        alert(`✅ 링크가 복사되었습니다!\n\n설정: ${stageText}${timerText}${randomText}${limitText}${modeText}${ttsText}\n문장: ${state.sentences.length}개`);
     }).catch(() => {
         prompt('아래 링크를 복사하세요:', shareUrl);
     });
@@ -404,7 +434,7 @@ function checkUrlParams() {
                 state.selectedStages = [1, 2, 3];
                 state.timerEnabled = false;
             } else {
-                // New format with stages, timer, random, attemptLimit, progressMode
+                // New format with stages, timer, random, attemptLimit, progressMode, ttsMode
                 state.sentences = decoded.sentences.map(english => ({
                     english: english,
                     chunks: autoChunk(english)
@@ -418,6 +448,9 @@ function checkUrlParams() {
 
                 // Apply progress mode from shared link
                 state.progressMode = decoded.progressMode || 'focus';
+
+                // Apply TTS mode from shared link
+                state.ttsMode = decoded.ttsMode || 'after-correct';
 
                 // Apply random shuffle if set
                 if (decoded.random) {
@@ -541,6 +574,17 @@ function loadCurrentSentence() {
         state.selectedStages.indexOf(state.currentStage);
     const progress = (completedStages / totalStages) * 100;
     document.getElementById('progress-bar').style.width = `${progress}%`;
+
+    // TTS 버튼 표시 제어
+    const voiceBtn = document.getElementById('voice-btn');
+    if (voiceBtn) {
+        const ttsMode = state.ttsMode || 'after-correct';
+        if (ttsMode === 'none' || ttsMode === 'after-correct') {
+            voiceBtn.style.display = 'none';  // 소리없음/정답후 모드에선 버튼 숨김
+        } else {
+            voiceBtn.style.display = '';  // 자유청취 모드에선 표시
+        }
+    }
 
     updateStageInfo();
     document.getElementById('korean-meaning').textContent = '순서를 맞춰보세요!';
@@ -836,6 +880,11 @@ function checkAnswer() {
 
         showFeedback('success', '🎉 정답입니다! 훌륭해요!');
 
+        // TTS 자동 재생 (정답 후 모드)
+        if ((state.ttsMode || 'after-correct') === 'after-correct') {
+            setTimeout(() => speakSentence(), 100);
+        }
+
         setTimeout(() => {
             advanceProgress();
         }, 1200);
@@ -843,7 +892,7 @@ function checkAnswer() {
         state.wrongAttempts++;
         state.currentStageAttempts++;
 
-        // 오답 전체 문장 저장 (정답 맞추기 전 상태를 보존)
+        // 오답 전체 문장 저장 (정답 맞춰주기 전 상태를 보존)
         lastWrongSentence = currentOrder.join(' ');
 
         // Track specific errors
@@ -857,11 +906,11 @@ function checkAnswer() {
             }
         });
 
-        // Check if attempt limit reached (3 attempts in limited mode)
+        // Check if attempt limit reached
         if (state.attemptLimit > 0 && state.currentStageAttempts >= state.attemptLimit) {
             // Show correct answer and skip button
             const correctAnswer = correctOrder.join(' ');
-            showFeedback('limit', `❌ 3번 틀렸어요!<br><br>
+            showFeedback('limit', `❌ ${state.attemptLimit}번 틀렸어요!<br><br>
                 <div class="correct-answer-reveal">
                     <strong>정답:</strong> ${correctAnswer}
                 </div>

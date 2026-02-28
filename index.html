@@ -109,14 +109,42 @@
                         <label class="option-label">시도 제한</label>
                         <div class="attempt-mode-options">
                             <label class="radio-pill">
-                                <input type="radio" name="attempt-mode" id="attempt-unlimited" checked>
+                                <input type="radio" name="attempt-mode" id="attempt-unlimited" checked onchange="toggleAttemptCount()">
                                 <span>♾️ 맞출 때까지</span>
                             </label>
                             <label class="radio-pill limit-mode">
-                                <input type="radio" name="attempt-mode" id="attempt-limited">
-                                <span>❌ 3번 틀리면 스킵</span>
+                                <input type="radio" name="attempt-mode" id="attempt-limited" onchange="toggleAttemptCount()">
+                                <span>❌ 틀리면 스킵</span>
                             </label>
                         </div>
+                        <div class="attempt-count-group" id="attempt-count-group" style="display:none;">
+                            <label class="attempt-count-label">스킵 기준 횟수</label>
+                            <div class="attempt-count-selector">
+                                <button type="button" class="count-btn" onclick="changeAttemptCount(-1)">−</button>
+                                <span id="attempt-count-display" class="count-display">3회</span>
+                                <input type="hidden" id="attempt-count-value" value="3">
+                                <button type="button" class="count-btn" onclick="changeAttemptCount(1)">+</button>
+                            </div>
+                            <small class="count-hint">2~6회 설정 가능</small>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label class="option-label">🔊 소리 설정</label>
+                        <div class="attempt-mode-options">
+                            <label class="radio-pill">
+                                <input type="radio" name="tts-mode" id="tts-after-correct" checked>
+                                <span>✅ 정답 후 자동</span>
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="tts-mode" id="tts-free">
+                                <span>🔊 자유 청취</span>
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="tts-mode" id="tts-none">
+                                <span>🔇 소리 없음</span>
+                            </label>
+                        </div>
+                        <small class="count-hint">✅ 정답 후 자동 = 정답 맞힌 직후 원어민 발음 재생</small>
                     </div>
                     <div class="option-group">
                         <label class="option-label">진행 방식</label>
