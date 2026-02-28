@@ -112,6 +112,7 @@ function exitLearning() {
 // ==========================================
 function addSentences() {
     const input = document.getElementById('sentence-input');
+    const koreanInput = document.getElementById('korean-input');
     const text = input.value.trim();
 
     if (!text) {
@@ -119,36 +120,38 @@ function addSentences() {
         return;
     }
 
-    // Split by newlines first
-    const lines = text.split('\n').filter(line => line.trim());
+    // Parse English sentences by newline
+    const englishLines = text.split('\n').map(l => l.trim()).filter(l => l);
 
-    // For each line, further split by sentence-ending periods
-    const sentences = [];
-    lines.forEach(line => {
-        // Split by period followed by space or end, but keep the period
+    // Parse Korean lines (optional) - match by line index
+    const koreanLines = koreanInput?.value
+        ? koreanInput.value.split('\n').map(l => l.trim()).filter(l => l)
+        : [];
+
+    let addedCount = 0;
+    englishLines.forEach((line, idx) => {
+        // Further split by sentence-ending if multiple sentences per line
         const parts = line.match(/[^.!?]*[.!?]+/g);
-        if (parts) {
-            parts.forEach(p => {
-                const s = p.trim();
-                if (s) sentences.push(s);
-            });
-        } else {
-            // No period found, use the whole line
-            const s = line.trim();
-            if (s) sentences.push(s);
-        }
-    });
+        const sentences = parts ? parts.map(p => p.trim()).filter(p => p) : [line];
 
-    sentences.forEach(sentence => {
-        if (sentence && !state.sentences.find(s => s.english === sentence)) {
-            state.sentences.push({
-                english: sentence,
-                chunks: autoChunk(sentence)
-            });
-        }
+        sentences.forEach((sentence, partIdx) => {
+            if (sentence && !state.sentences.find(s => s.english === sentence)) {
+                // Korean: use corresponding line if only 1 part per line, else match index
+                const korean = (sentences.length === 1 && koreanLines[idx])
+                    ? koreanLines[idx]
+                    : '';
+                state.sentences.push({
+                    english: sentence,
+                    korean: korean,
+                    chunks: autoChunk(sentence)
+                });
+                addedCount++;
+            }
+        });
     });
 
     input.value = '';
+    if (koreanInput) koreanInput.value = '';
     updateSentenceList();
 }
 
@@ -192,7 +195,10 @@ function updateSentenceList() {
     list.innerHTML = state.sentences.map((sentence, index) => `
         <div class="sentence-item" data-index="${index}">
             <span class="sentence-num">${index + 1}</span>
-            <span class="sentence-text">${sentence.english}</span>
+            <div class="sentence-texts">
+                <span class="sentence-text">${sentence.english}</span>
+                ${sentence.korean ? `<span class="sentence-korean">${sentence.korean}</span>` : ''}
+            </div>
             <button class="sentence-delete" onclick="deleteSentence(${index})">✕</button>
         </div>
     `).join('');
@@ -391,7 +397,7 @@ function generateShareLink() {
     const ttsMode = getTTSSetting();
 
     const shareData = {
-        sentences: state.sentences.map(s => s.english),
+        sentences: state.sentences.map(s => ({ e: s.english, k: s.korean || '' })),
         stages: selectedStages,
         timer: timerSettings.enabled ? timerSettings.seconds : 0,
         random: randomOrder,
@@ -435,24 +441,19 @@ function checkUrlParams() {
                 state.timerEnabled = false;
             } else {
                 // New format with stages, timer, random, attemptLimit, progressMode, ttsMode
-                state.sentences = decoded.sentences.map(english => ({
-                    english: english,
-                    chunks: autoChunk(english)
-                }));
+                const rawSentences = decoded.sentences || [];
+                state.sentences = rawSentences.map(item => {
+                    // Support both old string format and new {e,k} object format
+                    const english = typeof item === 'string' ? item : item.e;
+                    const korean = typeof item === 'string' ? '' : (item.k || '');
+                    return { english, korean, chunks: autoChunk(english) };
+                });
                 state.selectedStages = decoded.stages || [1, 2, 3];
                 state.timerEnabled = decoded.timer > 0;
                 state.timerSeconds = decoded.timer || 60;
-
-                // Apply attempt limit from shared link
                 state.attemptLimit = decoded.attemptLimit || 0;
-
-                // Apply progress mode from shared link
                 state.progressMode = decoded.progressMode || 'focus';
-
-                // Apply TTS mode from shared link
                 state.ttsMode = decoded.ttsMode || 'after-correct';
-
-                // Apply random shuffle if set
                 if (decoded.random) {
                     state.sentences = shuffleArray([...state.sentences]);
                 }
@@ -563,8 +564,8 @@ function startDemo() {
 function loadCurrentSentence() {
     const sentence = state.sentences[state.currentSentenceIndex];
     state.stageStartTime = Date.now();
-    state.currentStageAttempts = 0;  // Reset attempts for new stage
-    lastWrongSentence = '';  // 방어적 초기화 - 새 문제 시 오답 데이터 클리어
+    state.currentStageAttempts = 0;
+    lastWrongSentence = '';
 
     document.getElementById('current-sentence-num').textContent = state.currentSentenceIndex + 1;
     document.getElementById('total-sentences').textContent = state.sentences.length;
@@ -575,22 +576,23 @@ function loadCurrentSentence() {
     const progress = (completedStages / totalStages) * 100;
     document.getElementById('progress-bar').style.width = `${progress}%`;
 
-    // TTS 버튼 표시 제어
     const voiceBtn = document.getElementById('voice-btn');
     if (voiceBtn) {
         const ttsMode = state.ttsMode || 'after-correct';
-        if (ttsMode === 'none' || ttsMode === 'after-correct') {
-            voiceBtn.style.display = 'none';  // 소리없음/정답후 모드에선 버튼 숨김
-        } else {
-            voiceBtn.style.display = '';  // 자유청취 모드에선 표시
-        }
+        voiceBtn.style.display = (ttsMode === 'none' || ttsMode === 'after-correct') ? 'none' : '';
     }
 
     updateStageInfo();
-    document.getElementById('korean-meaning').textContent = '순서를 맞춰보세요!';
+
+    const koreanEl = document.getElementById('korean-meaning');
+    if (koreanEl) {
+        koreanEl.textContent = sentence.korean ? sentence.korean : '\uc21c\uc11c\ub97c \ub9de\ucdb0\ubcf4\uc138\uc694!';
+        koreanEl.classList.toggle('korean-hint', !!sentence.korean);
+    }
     hideFeedback();
     generateLearningContent(sentence);
 }
+
 
 function updateStageInfo() {
     const stageBadge = document.getElementById('stage-badge');
@@ -955,13 +957,135 @@ function checkAnswer() {
     }
 }
 
-// Skip to next when 3 attempts reached
+// Skip to next when attempt limit reached
 function skipToNext() {
     state.currentStageAttempts = 0;
     currentAttempts = 0;
     currentErrors = [];
     lastWrongSentence = '';
     advanceProgress();
+}
+
+// ==========================================
+// MD Report & Export
+// ==========================================
+function generateMDReport() {
+    const now = new Date();
+    const dateStr = now.getFullYear() + '.' +
+        String(now.getMonth() + 1).padStart(2, '0') + '.' +
+        String(now.getDate()).padStart(2, '0');
+    const totalStages = state.sentences.length * state.selectedStages.length;
+    const accuracy = totalStages > 0 ? Math.round((state.correctCount / totalStages) * 100) : 0;
+
+    const wrongResults = state.results.filter(r => !r.correct || r.skipped);
+    const wrongSentences = [...new Set(wrongResults.map(r => r.sentence))];
+
+    let md = '# Sweep 학습 결과 리포트\n\n';
+    md += '- **날짜**: ' + dateStr + '\n';
+    md += '- **총 문장**: ' + state.sentences.length + '개\n';
+    md += '- **단계**: ' + state.selectedStages.join(', ') + '단계\n';
+    md += '- **정답률**: ' + accuracy + '% (' + state.correctCount + '/' + totalStages + ')\n';
+    md += '- **오답 횟수**: ' + state.wrongAttempts + '회 | **힌트**: ' + state.hintsUsed + '회\n\n';
+
+    md += '## 단계별 분석\n\n';
+    md += '| 단계 | 이름 | 정답률 |\n|------|------|--------|\n';
+    for (const stage of state.selectedStages) {
+        const sr = state.results.filter(r => r.stage === stage);
+        const sc = sr.filter(r => r.correct).length;
+        const sa = sr.length > 0 ? Math.round(sc / sr.length * 100) : 0;
+        const sn = stage === 1 ? '청크 배열' : stage === 2 ? '핵심 배열' : '완전 배열';
+        md += '| ' + stage + '단계 | ' + sn + ' | ' + sa + '% |\n';
+    }
+    md += '\n';
+
+    md += '## 문장별 상세 기록\n\n';
+    const sentenceMap = {};
+    state.results.forEach(r => {
+        if (!sentenceMap[r.sentence]) sentenceMap[r.sentence] = [];
+        sentenceMap[r.sentence].push(r);
+    });
+
+    state.sentences.forEach((s, idx) => {
+        const records = sentenceMap[s.english] || [];
+        const allCorrect = records.length > 0 && records.every(r => r.correct && !r.skipped);
+        const hasWrong = records.some(r => !r.correct || r.skipped);
+        const icon = allCorrect ? '✅' : hasWrong ? '❌' : '❓';
+
+        md += '### ' + icon + ' 문장 ' + (idx + 1) + '\n';
+        md += '- **영어**: ' + s.english + '\n';
+        if (s.korean) md += '- **한글**: ' + s.korean + '\n';
+
+        records.forEach(r => {
+            const sl = r.stage + '단계';
+            if (r.correct && !r.skipped) {
+                md += '- ' + sl + ': 정답 (' + r.attempts + '회 시도, ' + r.time + '초)\n';
+            } else if (r.skipped) {
+                md += '- ' + sl + ': 스킵 (최대 시도 초과)\n';
+                if (r.studentAnswer) md += '  - 오답 문장: ' + r.studentAnswer + '\n';
+            }
+        });
+        md += '\n';
+    });
+
+    if (wrongSentences.length > 0) {
+        md += '## 오답 문장 모음 (Syntax Sniper 연습용)\n\n';
+        wrongSentences.forEach((s, i) => {
+            const sObj = state.sentences.find(x => x.english === s);
+            md += (i + 1) + '. ' + s;
+            if (sObj && sObj.korean) md += ' (' + sObj.korean + ')';
+            md += '\n';
+        });
+        md += '\n';
+    }
+
+    md += '## Gemini 분석 요청\n\n';
+    md += '> 다음 질문에 답해주세요:\n>\n';
+    md += '> 1. 위 오답 패턴의 **공통 문법 구조**는? (후치수식, 부사구문, 종속절 등)\n>\n';
+    md += '> 2. 후치수식(관계절, 분사, to부정사)과 오답 상관관계가 있는가?\n>\n';
+    md += '> 3. 1/2/3단계 중 가장 취약한 단계와 이유는?\n>\n';
+    md += '> 4. **Syntax Sniper**에서 집중 연습할 후치수식 유형 추천\n>\n';
+    md += '> 5. 다음 학습을 위한 구체적 조언\n\n';
+    md += '---\n*Sweep v2.0 | Wonsummer Studio*\n';
+
+    return md;
+}
+
+function downloadMD() {
+    if (!state.results || state.results.length === 0) {
+        alert('학습을 먼저 완료해주세요!');
+        return;
+    }
+    const md = generateMDReport();
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const ds = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+    a.href = url;
+    a.download = 'sweep_result_' + ds + '.md';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function copyWrongSentences() {
+    const wrongResults = state.results.filter(r => !r.correct || r.skipped);
+    const wrongSentences = [...new Set(wrongResults.map(r => r.sentence))];
+
+    if (wrongSentences.length === 0) {
+        alert('틀린 오답이 없어요! 다 맞혔어요 🎉');
+        return;
+    }
+
+    const text = wrongSentences.join('\n');
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('클립보드에 복사되었습니다! (' + wrongSentences.length + '개 문장)\n\nSyntax Sniper 커스텀 텍스트에 붙여넣기 하세요.');
+        }).catch(() => {
+            prompt('아래 문장을 복사하세요:', text);
+        });
+    } else {
+        prompt('아래 문장을 복사하세요:', text);
+    }
 }
 
 // Reset all placed blocks back to word bank

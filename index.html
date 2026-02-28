@@ -60,10 +60,18 @@
 
         <div class="teacher-container">
             <div class="input-section">
-                <label for="sentence-input">문장 입력</label>
-                <textarea id="sentence-input"
-                    placeholder="영어 문장을 입력하세요...&#10;예: The quick brown fox jumps over the lazy dog.&#10;&#10;여러 문장을 입력하려면 줄바꿈으로 구분하세요."></textarea>
-
+                <div class="dual-input-row">
+                    <div class="dual-input-col">
+                        <label for="sentence-input">🇺🇸 영어 문장</label>
+                        <textarea id="sentence-input" placeholder="영어 문장 붙여넣기&#10;&#10;The fox jumped over the dog.&#10;She has been studying hard.
+여러 문장은 줄바꿈으로 구분"></textarea>
+                    </div>
+                    <div class="dual-input-col">
+                        <label for="korean-input">🇰🇷 한글 해석 <span class="optional-tag">(선택)</span></label>
+                        <textarea id="korean-input" placeholder="한글 해석 붙여넣기&#10;&#10;여우가 개를 뛰어넘었다.&#10;그녀는 열심히 공부해 왔다.
+없으면 비워두세요"></textarea>
+                    </div>
+                </div>
                 <button class="primary-btn" onclick="addSentences()">
                     <span>➕</span> 문장 추가
                 </button>
@@ -109,11 +117,13 @@
                         <label class="option-label">시도 제한</label>
                         <div class="attempt-mode-options">
                             <label class="radio-pill">
-                                <input type="radio" name="attempt-mode" id="attempt-unlimited" checked onchange="toggleAttemptCount()">
+                                <input type="radio" name="attempt-mode" id="attempt-unlimited" checked
+                                    onchange="toggleAttemptCount()">
                                 <span>♾️ 맞출 때까지</span>
                             </label>
                             <label class="radio-pill limit-mode">
-                                <input type="radio" name="attempt-mode" id="attempt-limited" onchange="toggleAttemptCount()">
+                                <input type="radio" name="attempt-mode" id="attempt-limited"
+                                    onchange="toggleAttemptCount()">
                                 <span>❌ 틀리면 스킵</span>
                             </label>
                         </div>
@@ -314,6 +324,12 @@
             <div class="result-actions">
                 <button class="secondary-btn" onclick="showModeSelect()">
                     <span>🏠</span> 홈으로
+                </button>
+                <button class="md-btn" onclick="downloadMD()">
+                    <span>📄</span> MD 저장
+                </button>
+                <button class="copy-wrong-btn" onclick="copyWrongSentences()">
+                    <span>📋</span> 오답 복사
                 </button>
                 <button class="primary-btn" onclick="restartLearning()">
                     <span>🔄</span> 다시 하기

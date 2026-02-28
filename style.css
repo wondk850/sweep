@@ -290,6 +290,149 @@ body {
     color: var(--text-muted);
 }
 
+/* ========================================
+   Dual Input (English / Korean)
+   ======================================== */
+.dual-input-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dual-input-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dual-input-col label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.dual-input-col textarea {
+    flex: 1;
+    min-height: 130px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+}
+
+.dual-input-col textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.dual-input-col textarea::placeholder {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* Korean input distinct color */
+#korean-input {
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+#korean-input:focus {
+    border-color: var(--stage2);
+}
+
+.optional-tag {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 600px) {
+    .dual-input-row {
+        flex-direction: column;
+    }
+
+    .dual-input-col textarea {
+        min-height: 90px;
+    }
+}
+
+/* Sentence list with Korean */
+.sentence-texts {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.sentence-korean {
+    font-size: 12px;
+    color: var(--stage2);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Korean hint in learning screen */
+.korean-hint {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 18px !important;
+}
+
+/* MD / Copy Wrong buttons */
+.md-btn {
+    flex: 1;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.md-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.copy-wrong-btn {
+    flex: 1;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.copy-wrong-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+
 .input-options {
     display: flex;
     gap: 16px;
