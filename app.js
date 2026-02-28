@@ -922,23 +922,9 @@ function checkAnswer() {
                 </button>
             `);
 
-            // Record as failed
-            const timeSpent = Math.round((Date.now() - state.stageStartTime) / 1000);
-            state.results.push({
-                sentence: state.sentences[state.currentSentenceIndex].english,
-                stage: state.currentStage,
-                correct: false,
-                attempts: currentAttempts,
-                hintsUsed: state.hintsUsed,
-                time: timeSpent,
-                errors: [...currentErrors],
-                skipped: true,
-                studentAnswer: currentOrder.join(' ')
-            });
-
-            currentAttempts = 0;
-            currentErrors = [];
-            lastWrongSentence = '';
+            // 한도 초과 시: 팘드백만 보여주고 skip 버튼 표시
+            // (results.push는 skipToNext에서 1회만 실행)
+            currentErrors = [chunkAnalysis];  // 마지막 오답 스냅숏 보존
         } else {
             // Get smart pairing hint based on the error
             const sentence = state.sentences[state.currentSentenceIndex].english;
@@ -960,6 +946,19 @@ function checkAnswer() {
 
 // Skip to next when attempt limit reached
 function skipToNext() {
+    // 스킵 시점에 결과 1회만 기록 (checkAnswer에서 중복 push 제거)
+    const timeSpent = Math.round((Date.now() - state.stageStartTime) / 1000);
+    state.results.push({
+        sentence: state.sentences[state.currentSentenceIndex].english,
+        stage: state.currentStage,
+        correct: false,
+        attempts: currentAttempts,
+        hintsUsed: state.hintsUsed,
+        time: timeSpent,
+        errors: currentErrors.length > 0 ? [...currentErrors] : [],
+        skipped: true,
+        studentAnswer: lastWrongSentence || ''
+    });
     state.currentStageAttempts = 0;
     currentAttempts = 0;
     currentErrors = [];
@@ -997,6 +996,47 @@ function copyMDReport() {
  * @returns {{ transpositions: Array, misplaced: Array, summary: string }}
  */
 function detectChunkTranspositions(studentWords, correctWords, originalChunks) {
+    // ============================================================
+    // 특수 케이스: studentWords/correctWords가 이미 청크 단위 배열일 때
+    //   (1단계: 항목이 다중 단어 청크로 이루어짐)
+    // 이경우 단어 분해 없이 청크의 순서만 비교
+    // ============================================================
+    const isChunkLevelArray = correctWords.some(w => w.includes(' '));
+    if (isChunkLevelArray) {
+        const normChunk = s => s.toLowerCase().replace(/[.,!?;:'"]/g, '').trim();
+        const correctNorm = correctWords.map(normChunk);
+        const studentNormArr = studentWords.map(normChunk);
+
+        // 학생 순서를 정답 순서와 비교
+        const transpositions = [];
+        for (let i = 0; i < studentNormArr.length; i++) {
+            if (studentNormArr[i] !== correctNorm[i]) {
+                const ci = correctNorm.indexOf(studentNormArr[i]);
+                if (ci > i) {
+                    const already = transpositions.some(t =>
+                        (t.chunkA === correctWords[i] && t.chunkB === correctWords[ci]) ||
+                        (t.chunkA === correctWords[ci] && t.chunkB === correctWords[i])
+                    );
+                    if (!already) transpositions.push({
+                        chunkA: correctWords[i],
+                        chunkB: correctWords[ci],
+                        correctOrder: `[${correctWords[i]}] → [${correctWords[ci]}]`,
+                        studentOrder: `[${correctWords[ci]}] → [${correctWords[i]}]`
+                    });
+                }
+            }
+        }
+        const summary = transpositions.length > 0
+            ? transpositions.map(t => `[${t.chunkA}] ↔ [${t.chunkB}] 순서 전도`).join('; ')
+            : '청크 순서 유사, 세부 어순 오류';
+        return {
+            type: transpositions.length > 0 ? 'CHUNK_TRANSPOSITION' : 'CHUNK_INTACT_ERROR',
+            transpositions,
+            misplaced: [],
+            preservationPct: 100,
+            summary
+        };
+    }
     // 청크 목록 정제: 없으면 correctWords 각 항목을 청크로
     const chunks = (originalChunks && originalChunks.length > 0)
         ? originalChunks
@@ -1278,7 +1318,7 @@ function generateMDReport() {
     md += '> 5. 다음 학습을 위한 구체적 조언\n\n';
     md += '> 📌 **데이터 형식 안내**: 각 오답의 "전도 구간" 항목은 SWEEP이 자동 분석한 청크 단위 오류입니다.\n';
     md += '> 단어 나열이 아닌 의미 덩어리(청크) 기준으로 어느 부분이 뒤바뀌었는지를 보여줍니다.\n\n';
-    md += '---\n*Sweep v4.0 | Wonsummer Studio*\n';
+    md += '---\n*Sweep v4.2 | Wonsummer Studio*\n';
 
     return md;
 }
